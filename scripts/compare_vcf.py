@@ -7,7 +7,7 @@ def read_vcf(path):
             if line.startswith("#"):
                 continue
             fields = line.rstrip("\n").split("\t")
-            var_details = (fields[0], int(fields[1]), fields[3], fields[4])
+            var_details = (fields[0], int(fields[1]), fields[3].upper(), fields[4].upper())
             variants.append(var_details)
     return variants
 
@@ -36,9 +36,9 @@ def filter_variants(variants, intervals):
             kept.add(variant)
     return kept
 
-truth_variants = read_vcf('data/truth_brca1.vcf.gz')
-bcf_variants = read_vcf('results/variants/na12878.bcftools.vcf.gz')
-gatk_variants = read_vcf('results/variants/na12878.gatk.vcf.gz')
+truth_variants = read_vcf('data/truth_brca1.norm.vcf.gz')
+bcf_variants = read_vcf('results/variants/na12878.bcftools.norm.vcf.gz')
+gatk_variants = read_vcf('results/variants/na12878.gatk.norm.vcf.gz')
 truth_bed = read_bed("data/HG001_benchmark.bed")
 
 truth_filtered = filter_variants(truth_variants, truth_bed)
@@ -52,3 +52,11 @@ precision = len(tp)/(len(tp)+len(fp))
 
 print(f"# truth variants before filtering: {len(truth_variants)}\t # truth variants after filtering: {len(truth_filtered)}, \n# bcf variants before filtering: {len(bcf_variants)}\t # bcf variants after filtering: {len(bcf_filtered)} ")
 print(f"tp: {len(tp)}, fp: {len(fp)}, fn: {len(fn)} \nPrecision: {round(precision,3)}, Recall: {round(recall,3)}" )
+
+print("FP:")
+for var in sorted(fp):
+    print(var)
+
+print("FN:")
+for var in sorted(fn):
+    print(var)
