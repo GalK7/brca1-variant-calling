@@ -36,6 +36,14 @@ def filter_variants(variants, intervals):
             kept.add(variant)
     return kept
 
+def compare(truth, calls):
+    tp = truth&calls
+    fn = truth-calls
+    fp = calls-truth
+    recall = len(tp)/(len(tp)+len(fn))
+    precision = len(tp)/(len(tp)+len(fp))
+    return tp, fp, fn, precision, recall
+
 truth_variants = read_vcf('data/truth_brca1.norm.vcf.gz')
 bcf_variants = read_vcf('results/variants/na12878.bcftools.norm.vcf.gz')
 gatk_variants = read_vcf('results/variants/na12878.gatk.norm.vcf.gz')
@@ -43,20 +51,19 @@ truth_bed = read_bed("data/HG001_benchmark.bed")
 
 truth_filtered = filter_variants(truth_variants, truth_bed)
 bcf_filtered = filter_variants(bcf_variants, truth_bed)
+gatk_filtered = filter_variants(gatk_variants, truth_bed)
 
-tp = truth_filtered&bcf_filtered
-fn = truth_filtered-bcf_filtered
-fp = bcf_filtered-truth_filtered
-recall = len(tp)/(len(tp)+len(fn))
-precision = len(tp)/(len(tp)+len(fp))
+tools = [("bcftools", bcf_filtered), ("GATK", gatk_filtered)]
 
-print(f"# truth variants before filtering: {len(truth_variants)}\t # truth variants after filtering: {len(truth_filtered)}, \n# bcf variants before filtering: {len(bcf_variants)}\t # bcf variants after filtering: {len(bcf_filtered)} ")
-print(f"tp: {len(tp)}, fp: {len(fp)}, fn: {len(fn)} \nPrecision: {round(precision,3)}, Recall: {round(recall,3)}" )
+print(f"# truth variants before filtering: {len(truth_variants)}\t # truth variants after filtering: {len(truth_filtered)}, \n# bcf variants before filtering: {len(bcf_variants)}\t # bcf variants after filtering: {len(bcf_filtered)}, \n# gatk variants before filtering: {len(gatk_variants)}\t # gatk variants after filtering: {len(gatk_filtered)}")
 
-print("FP:")
-for var in sorted(fp):
-    print(var)
-
-print("FN:")
-for var in sorted(fn):
-    print(var)
+for tool_name, tool_calls in tools:
+    tp, fp, fn, precision, recall = compare(truth_filtered, tool_calls)
+    print(f"\n{tool_name} results:")
+    print(f"tp: {len(tp)}, fp: {len(fp)}, fn: {len(fn)} \nPrecision: {round(precision,3)}, Recall: {round(recall,3)}" )
+    print("FP:")
+    for var in sorted(fp):
+        print(var)
+    print("FN:")
+    for var in sorted(fn):
+        print(var)
