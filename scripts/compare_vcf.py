@@ -29,25 +29,26 @@ def in_regions(variant, intervals):
             return True
     return False
 
+def filter_variants(variants, intervals):
+    kept = set()
+    for variant in variants:
+        if in_regions(variant, intervals):
+            kept.add(variant)
+    return kept
+
 truth_variants = read_vcf('data/truth_brca1.vcf.gz')
 bcf_variants = read_vcf('results/variants/na12878.bcftools.vcf.gz')
 gatk_variants = read_vcf('results/variants/na12878.gatk.vcf.gz')
-
-
-# set_truth_variants = set(truth_variants)
-# set_bcf_variants = set(bcf_variants)
-
-# tp = set_truth_variants&set_bcf_variants
-# fn = set_truth_variants-set_bcf_variants
-# fp = set_bcf_variants-set_truth_variants
-
-# recall = len(tp)/(len(tp)+len(fn))
-# precision = len(tp)/(len(tp)+len(fp))
-
-# print(f"tp: {len(tp)}, fp: {len(fp)}, fn: {len(fn)} \nPercision: {round(precision,3)}, Recall: {round(recall,3)}" )
-
-
 truth_bed = read_bed("data/HG001_benchmark.bed")
-# print(len(truth_bed), truth_bed[0], truth_bed[-1])
 
-print(in_regions(truth_variants[0], truth_bed))
+truth_filtered = filter_variants(truth_variants, truth_bed)
+bcf_filtered = filter_variants(bcf_variants, truth_bed)
+
+tp = truth_filtered&bcf_filtered
+fn = truth_filtered-bcf_filtered
+fp = bcf_filtered-truth_filtered
+recall = len(tp)/(len(tp)+len(fn))
+precision = len(tp)/(len(tp)+len(fp))
+
+print(f"# truth variants before filtering: {len(truth_variants)}\t # truth variants after filtering: {len(truth_filtered)}, \n# bcf variants before filtering: {len(bcf_variants)}\t # bcf variants after filtering: {len(bcf_filtered)} ")
+print(f"tp: {len(tp)}, fp: {len(fp)}, fn: {len(fn)} \nPrecision: {round(precision,3)}, Recall: {round(recall,3)}" )
