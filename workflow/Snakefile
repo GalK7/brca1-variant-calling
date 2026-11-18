@@ -1,3 +1,8 @@
+rule all:
+    input:
+        "results/aligned/na12878.sorted.bam",
+        "results/aligned/na12878.sorted.bam.bai"
+
 rule fastp:
     input:
         r1="data/na12878_R1.fastq.gz",
@@ -9,3 +14,14 @@ rule fastp:
         json="results/qc/fastp.json"
     shell:
         "fastp -i {input.r1} -I {input.r2}   -o {output.r1} -O {output.r2}   --detect_adapter_for_pe   -h {output.html} -j {output.json}"
+
+rule bwa:
+    input:
+        r1="results/trimmed/na12878_R1.trimmed.fastq.gz",
+        r2="results/trimmed/na12878_R2.trimmed.fastq.gz",
+        reference="data/chr17.fa"
+    output:
+        bam="results/aligned/na12878.sorted.bam",
+        index="results/aligned/na12878.sorted.bam.bai"
+    shell:
+        "bwa  mem -t 4 -R '@RG\\tID:na12878\\tSM:NA12878\\tPL:ILLUMINA'   {input.reference}   {input.r1} {input.r2}   | samtools sort -o {output.bam} - && samtools index {output.bam}"
