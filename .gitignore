@@ -2,4 +2,4 @@ data/
 results/
 .snakemake/
 __pycache__/
-.vscode/
+.vscode/*.tbi
