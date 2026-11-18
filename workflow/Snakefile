@@ -1,7 +1,7 @@
 rule all:
     input:
-        "results/aligned/na12878.sorted.bam",
-        "results/aligned/na12878.sorted.bam.bai"
+        "results/aligned/na12878.markdup.bam",
+        "results/aligned/na12878.markdup.bam.bai"
 
 rule fastp:
     input:
@@ -25,3 +25,13 @@ rule bwa:
         index="results/aligned/na12878.sorted.bam.bai"
     shell:
         "bwa  mem -t 4 -R '@RG\\tID:na12878\\tSM:NA12878\\tPL:ILLUMINA'   {input.reference}   {input.r1} {input.r2}   | samtools sort -o {output.bam} - && samtools index {output.bam}"
+        
+rule mark_duplicates:
+    input:
+        bam="results/aligned/na12878.sorted.bam"
+    output:
+        bam="results/aligned/na12878.markdup.bam",
+        index="results/aligned/na12878.markdup.bam.bai",
+        metrics="results/qc/markdup_metrics.txt"
+    shell:
+        "gatk MarkDuplicates -I {input.bam}   -O {output.bam}   -M {output.metrics} && samtools index {output.bam}"
