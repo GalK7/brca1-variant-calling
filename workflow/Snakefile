@@ -1,7 +1,7 @@
 rule all:
     input:
-        "results/aligned/na12878.markdup.bam",
-        "results/aligned/na12878.markdup.bam.bai"
+        "results/variants/na12878.bcftools.vcf.gz",
+        "results/variants/na12878.gatk.vcf.gz"
 
 rule fastp:
     input:
@@ -35,3 +35,25 @@ rule mark_duplicates:
         metrics="results/qc/markdup_metrics.txt"
     shell:
         "gatk MarkDuplicates -I {input.bam}   -O {output.bam}   -M {output.metrics} && samtools index {output.bam}"
+
+rule call_bcftools:
+    input:
+        bam="results/aligned/na12878.markdup.bam",
+        index="results/aligned/na12878.markdup.bam.bai",
+        reference="data/chr17.fa"
+    output:
+        vcf="results/variants/na12878.bcftools.vcf.gz",
+        tbi="results/variants/na12878.bcftools.vcf.gz.tbi"
+    shell:
+        "bcftools mpileup -f {input.reference} -r chr17:43030000-43140000 -a FORMAT/AD,FORMAT/DP   {input.bam}   | bcftools call -m -v -Oz -o {output.vcf} && bcftools index -t {output.vcf}"
+
+rule call_gatk:
+    input:
+        bam="results/aligned/na12878.markdup.bam",
+        index="results/aligned/na12878.markdup.bam.bai",
+        reference="data/chr17.fa"
+    output:
+        vcf="results/variants/na12878.gatk.vcf.gz",
+        tbi="results/variants/na12878.gatk.vcf.gz.tbi"
+    shell:
+        "gatk HaplotypeCaller   -R {input.reference}   -I {input.bam}   -L chr17:43030000-43140000   -O {output.vcf}"
