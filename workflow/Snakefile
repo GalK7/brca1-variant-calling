@@ -1,6 +1,7 @@
 rule all:
     input:
-        "results/benchmark.txt"
+        "results/benchmark.txt",
+        "results/annotation/variant_summary.tsv"
 
 rule fastp:
     input:
@@ -77,3 +78,64 @@ rule compare:
         benchmark="results/benchmark.txt"
     shell:
         "python {input.script} > {output.benchmark}"
+
+rule snpeff_db:
+    output:
+        directory("data/snpeff/GRCh38.mane.1.5.refseq")
+    conda:
+        "envs/snpeff.yaml"
+    shell:
+        "snpEff download -dataDir $(pwd)/data/snpeff GRCh38.mane.1.5.refseq"
+
+rule snpeff:
+    input:
+        vcf="results/variants/na12878.gatk.norm.vcf.gz",
+        db="data/snpeff/GRCh38.mane.1.5.refseq"
+    output:
+        vcf="results/annotation/na12878.gatk.snpeff.vcf.gz",
+        tbi="results/annotation/na12878.gatk.snpeff.vcf.gz.tbi",
+        html="results/annotation/snpeff_summary.html"
+    conda:
+        "envs/snpeff.yaml"
+    shell:
+        "snpEff ann -dataDir $(pwd)/data/snpeff -stats {output.html} GRCh38.mane.1.5.refseq {input.vcf} | bgzip > {output.vcf} && tabix -p vcf {output.vcf}"
+
+rule annotate_gnomad:
+    input:
+        vcf="results/annotation/na12878.gatk.snpeff.vcf.gz",
+        tbi="results/annotation/na12878.gatk.snpeff.vcf.gz.tbi",
+        gnomad="data/gnomad_brca1.vcf.gz"
+    output:
+        vcf="results/annotation/na12878.gatk.gnomad.vcf.gz",
+        tbi="results/annotation/na12878.gatk.gnomad.vcf.gz.tbi"
+    shell:
+        "bcftools annotate -a {input.gnomad} -c INFO/gnomAD_AF:=INFO/AF -Oz -o {output.vcf} {input.vcf} && bcftools index -t {output.vcf}"
+
+rule annotate_clinvar:
+    input:
+        vcf="results/annotation/na12878.gatk.gnomad.vcf.gz",
+        tbi="results/annotation/na12878.gatk.gnomad.vcf.gz.tbi",
+        clinvar="data/clinvar_brca1.vcf.gz"
+    output:
+        vcf="results/annotation/na12878.gatk.final.vcf.gz",
+        tbi="results/annotation/na12878.gatk.final.vcf.gz.tbi"
+    shell:
+        "bcftools annotate -a {input.clinvar} -c INFO/CLNSIG,INFO/CLNREVSTAT -Oz -o {output.vcf} {input.vcf} && bcftools index -t {output.vcf}"
+
+rule variants_table:
+    input:
+        vcf="results/annotation/na12878.gatk.final.vcf.gz"
+    output:
+        tsv="results/annotation/variants_table.tsv"
+    shell:
+        "bcftools query -f '%CHROM\\t%POS\\t%REF\\t%ALT\\t[%GT]\\t%INFO/gnomAD_AF\\t%INFO/CLNSIG\\t%INFO/CLNREVSTAT\\t%INFO/ANN\\n' {input.vcf} > {output.tsv}"
+
+rule summarize:
+    input:
+        tsv="results/annotation/variants_table.tsv",
+        script="scripts/summarize_annotation.py"
+    output:
+        summary="results/annotation/variant_summary.tsv",
+        report="results/annotation/annotation_report.txt"
+    shell:
+        "python {input.script} > {output.report}"
