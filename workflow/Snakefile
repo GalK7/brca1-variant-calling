@@ -1,8 +1,6 @@
 rule all:
     input:
-        "data/truth_brca1.norm.vcf.gz",
-        "results/variants/na12878.bcftools.norm.vcf.gz",
-        "results/variants/na12878.gatk.norm.vcf.gz"
+        "results/benchmark.txt"
 
 rule fastp:
     input:
@@ -67,3 +65,15 @@ rule normalize:
         vcf="{prefix}.norm.vcf.gz"
     shell:
         "bcftools norm -f {input.reference} -m -any -Oz -o {output.vcf} {input.vcf}"
+
+rule compare:
+    input:
+        "results/variants/na12878.bcftools.norm.vcf.gz",
+        "results/variants/na12878.gatk.norm.vcf.gz",
+        "data/truth_brca1.norm.vcf.gz",
+        "data/HG001_benchmark.bed",
+        script="scripts/compare_vcf.py"
+    output:
+        benchmark="results/benchmark.txt"
+    shell:
+        "python {input.script} > {output.benchmark}"
