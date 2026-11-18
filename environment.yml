@@ -1,0 +1,16 @@
+name: varcall
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - fastqc
+  - snakemake
+  - fastp
+  - pandas
+  - bwa
+  - samtools
+  - htslib
+  - matplotlib
+  - python=3.12
+  - bcftools
+  - gatk4
