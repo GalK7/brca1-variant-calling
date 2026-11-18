@@ -1,7 +1,8 @@
 rule all:
     input:
-        "results/variants/na12878.bcftools.vcf.gz",
-        "results/variants/na12878.gatk.vcf.gz"
+        "data/truth_brca1.norm.vcf.gz",
+        "results/variants/na12878.bcftools.norm.vcf.gz",
+        "results/variants/na12878.gatk.norm.vcf.gz"
 
 rule fastp:
     input:
@@ -57,3 +58,12 @@ rule call_gatk:
         tbi="results/variants/na12878.gatk.vcf.gz.tbi"
     shell:
         "gatk HaplotypeCaller   -R {input.reference}   -I {input.bam}   -L chr17:43030000-43140000   -O {output.vcf}"
+
+rule normalize:
+    input:
+        vcf="{prefix}.vcf.gz",
+        reference="data/chr17.fa"
+    output:
+        vcf="{prefix}.norm.vcf.gz"
+    shell:
+        "bcftools norm -f {input.reference} -m -any -Oz -o {output.vcf} {input.vcf}"
