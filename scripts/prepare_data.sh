@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prepare input data for the pipeline: reference, reads and truth set.
+# Prepare input data for the pipeline: reference, reads, truth set and annotation databases.
 # Run once from the project root:  bash scripts/prepare_data.sh
 set -euo pipefail
 
@@ -27,3 +27,17 @@ TRUTH="https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/NA12878_
 bcftools view -r chr17:43030000-43140000 "$TRUTH/HG001_GRCh38_1_22_v4.2.1_benchmark.vcf.gz" -Oz -o truth_brca1.vcf.gz
 bcftools index -t truth_brca1.vcf.gz
 curl -s -o HG001_benchmark.bed "$TRUTH/HG001_GRCh38_1_22_v4.2.1_benchmark.bed"
+
+
+# --- Annotation databases: gnomAD allele frequencies and ClinVar classifications ---
+# gnomAD v4.1 genomes: keep only the AF field for the BRCA1 region.
+GNOMAD="https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1/vcf/genomes/gnomad.genomes.v4.1.sites.chr17.vcf.bgz"
+bcftools view -r chr17:43030000-43140000 "$GNOMAD" | bcftools annotate -x ^INFO/AF -Oz -o gnomad_brca1.vcf.gz
+bcftools index -t gnomad_brca1.vcf.gz
+
+# ClinVar (latest weekly release): names chromosomes "17", so rename to "chr17"
+# to match the reference. Keep only the classification and review status.
+CLINVAR="https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar.vcf.gz"
+echo "17 chr17" > chr_rename.txt
+bcftools view -r 17:43030000-43140000 "$CLINVAR" | bcftools annotate --rename-chrs chr_rename.txt -x ^INFO/CLNSIG,INFO/CLNREVSTAT -Oz -o clinvar_brca1.vcf.gz
+bcftools index -t clinvar_brca1.vcf.gz
